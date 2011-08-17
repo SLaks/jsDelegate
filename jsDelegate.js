@@ -4,7 +4,7 @@
 		return function () { return func.apply(s, arguments); };
 	}
 	function isDelegate(func) {
-		return typeof func === "function" && typeof (func.push) === "function" && typeof (func.method) === "function";
+		return typeof func === "function" && func.curry === curry && typeof (func.push) === "function" && typeof (func.method) === "function";
 	}
 	function ensureDelegate(func) {
 		if (typeof func !== "function")
@@ -12,6 +12,13 @@
 		return isDelegate(func) ? func : createDelegate(func, func);
 	}
 
+	function curry() {
+		var preArgs = Array.prototype.slice.call(arguments);
+		var delegate = this;
+		return createDelegate(function () {
+			return delegate.apply(this, preArgs.concat(Array.prototype.slice.call(arguments)));
+		}, delegate.method);
+	}
 
 	function createDelegate(invoker, method, previous) {
 		var d = function delegateFunc() {
@@ -21,9 +28,9 @@
 		};
 
 		d.method = method;
+		d.curry = curry;
 		if (typeof previous === "function")
 			d.previous = previous;
-
 		d.push = function (prevDelegate) {
 			if (!prevDelegate)
 				return d;
@@ -59,7 +66,7 @@
 		},
 		combine: function () {
 			var retVal = null;
-			for (var i; i < arguments.length; i++) {
+			for (var i = 0; i < arguments.length; i++) {
 				if (!arguments[i])
 					continue;
 

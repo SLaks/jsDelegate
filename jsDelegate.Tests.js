@@ -35,7 +35,27 @@ test("OpenThis delegates", function () {
 	equal(d(-20, 16), 16, "OpenThis delegate passes second argument as first parameter");
 });
 
+test("Curried delegates", function () {
+	function argsReturner() {
+		return Array.prototype.slice.call(arguments);
+	}
+	var d = Delegate.createOpen(argsReturner);
+	deepEqual(d(1, 2, 3), [1, 2, 3], "Normal argsReturner delegate works");
+
+	var c = d.curry(1);
+	deepEqual(c(2), [1, 2], "Single curried argument works");
+});
+
 test("Combined delegates", function () {
-	var arr = [];
+	var arr;
 	var pusher = Delegate.createClosed(arr, "push");
+
+	var d = Delegate.combine(
+		function () { arr = []; },
+		pusher.curry(1),
+		pusher.curry(2),
+		pusher.curry(3)
+	);
+	d();
+	deepEqual(arr, [1, 2, 3], "Combine executes in order");
 });
