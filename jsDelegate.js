@@ -26,12 +26,13 @@
 				previous.apply(this, arguments);
 			return invoker.apply(this, arguments);
 		};
+		
 
 		d.method = method;
 		d.curry = curry;
 		if (typeof previous === "function")
 			d.previous = previous;
-		d.push = function (prevDelegate) {
+		d.prepend = function (prevDelegate) {
 			if (!prevDelegate)
 				return d;
 			prevDelegate = ensureDelegate(prevDelegate);
@@ -73,7 +74,7 @@
 				if (!retVal)
 					retVal = ensureDelegate(arguments[i]);
 				else
-					retVal = retVal.push(arguments[i]);
+					retVal = ensureDelegate(arguments[i]).prepend(retVal);
 			}
 			return retVal;
 		}

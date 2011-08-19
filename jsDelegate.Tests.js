@@ -47,15 +47,23 @@ test("Curried delegates", function () {
 });
 
 test("Combined delegates", function () {
-	var arr;
+	var arr = [];
 	var pusher = Delegate.createClosed(arr, "push");
 
 	var d = Delegate.combine(
-		function () { arr = []; },
+		function () { arr.splice(0); }, //Clear the array
 		pusher.curry(1),
 		pusher.curry(2),
 		pusher.curry(3)
 	);
 	d();
 	deepEqual(arr, [1, 2, 3], "Combine executes in order");
+
+	d = Delegate.combine(
+		d,
+		pusher.curry(4),
+		Delegate.combine(pusher.curry(5), pusher.curry(6))
+	);
+	d();
+	deepEqual(arr, [1, 2, 3, 4, 5, 6], "Multiple chains combine correctly");
 });
