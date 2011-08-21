@@ -35,6 +35,15 @@ test("OpenThis delegates", function () {
 	equal(d(-20, 16), 16, "OpenThis delegate passes second argument as first parameter");
 });
 
+test("isDelegate", function () {
+	strictEqual(false, Delegate.isDelegate(null), "Null isn't a delegate");
+	strictEqual(false, Delegate.isDelegate(42), "42 isn't a delegate");
+	strictEqual(false, Delegate.isDelegate(function () { }), "Normal function isn't a delegate");
+
+	ok(Delegate.isDelegate(Delegate.createClosed([], "join")), "Closed delegate is a delegate");
+	ok(Delegate.isDelegate(Delegate.combine(Function, Array)), "Closed delegate is a delegate");
+});
+
 test("Curried delegates", function () {
 	function argsReturner() {
 		return Array.prototype.slice.call(arguments);
