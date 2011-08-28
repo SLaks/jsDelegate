@@ -1,5 +1,6 @@
 ﻿var Delegate = (function () {
 	"use strict";
+	var noTarget = {};
 
 	function bind(func, s) {
 		return function () { return func.apply(s, arguments); };
@@ -29,7 +30,7 @@
 	var delegateMethods = {
 		copy: function (newPrevious) {
 			/// <summary>Creates a shallow copy of this delegate instance.  Only the most recent method in the delegate is copied.</summary>
-			return createDelegate(this.invoker, this.method, newPrevious);
+			return createDelegate(this.invoker, this.method, this.target, newPrevious);
 		},
 		curry: function () {
 			/// <summary>Creates a new delegate that passes the given parameter list to this delegate.</summary>
@@ -37,7 +38,7 @@
 			var delegate = this;
 			return createDelegate(function () {
 				return delegate.apply(this, preArgs.concat(Array.prototype.slice.call(arguments)));
-			}, delegate.method);
+			}, delegate.method, delegate.target);
 		},
 		each: function (callback) {
 			/// <summary>Runs a callback method on each function contained in this delegate.</summary>
@@ -47,6 +48,9 @@
 				this.previous[i].each(callback);
 			}
 			return callback(this, this.invoker);
+		},
+		remove: function () {
+			/// <summary>Removes all of the methods in one or more delegates from this delegate, returning a new delegate (or null if there are no other methods).</summary>
 		}
 	};
 
@@ -63,14 +67,16 @@
 		/// <summary>Wraps ordinary functions in delegates.</summary>
 		if (typeof func !== "function")
 			throw new Error("argument is not a function or delegate");
-		return isDelegate(func) ? func : createDelegate(func, func);
+		return isDelegate(func) ? func : createDelegate(func, func, noTarget);
 	}
 
-	function createDelegate(invoker, method, previous) {
+	function createDelegate(invoker, method, target, previous) {
 		if (typeof invoker !== "function")
 			throw new Error("Function expected");
 		if (typeof method !== "function")
 			throw new Error("Function expected");
+		if (arguments.length < 3)
+			throw new Error("Three parameters required");
 		if (previous && !(previous instanceof Array))
 			throw new Error("Previous is not an array");
 
@@ -84,9 +90,12 @@
 			});
 		};
 
-		//The method is not used.  It allows clients to see
-		//which method a closed delegate actually points to
+		//The method and target fields allow clients to
+		//see what a closed delegate points to. They're
+		//only used for comparison purposes.
 		d.method = method;
+		if (target !== noTarget)
+			d.target = target;
 		d.invoker = invoker;
 		d.previous = previous || [];
 
@@ -98,11 +107,11 @@
 		isDelegate: isDelegate,
 		createOpen: function (method) {
 			/// <summary>Creates an open delegate that calls its target method with the same `this` object that the delegate was called with.</summary>
-			return createDelegate(method, method);
+			return createDelegate(method, method, noTarget);
 		},
 		createOpenThis: function (method) {
 			/// <summary>Creates an open delegate that calls its target method with `this` as the delegate's first parameter.  The first parameter of the delegate call is not passed to the function.</summary>
-			return createDelegate(bind(method.call, method), method);
+			return createDelegate(bind(method.call, method), method, noTarget);
 		},
 		createClosed: function (thisObj, method) {
 			/// <summary>Creates a closed delegate that calls a method on a specific this-object.</summary>
@@ -110,7 +119,7 @@
 			/// <param name="method" type="Function | String">The function to invoke, or the name of a member function of the object.</param>
 			if (typeof method === "string")
 				method = thisObj[method];
-			return createDelegate(bind(method, thisObj), method);
+			return createDelegate(bind(method, thisObj), method, thisObj);
 		},
 		combine: function () {
 			/// <summary>Combines multiple functions or delegates into a single delegate that calls all of the methods in order.</summary>
@@ -124,7 +133,7 @@
 				if (!retVal)
 					retVal = ensureDelegate(next);
 				else if (!isDelegate(next))
-					retVal = createDelegate(next, next, [retVal]);
+					retVal = createDelegate(next, next, noTarget, [retVal]);
 				else {
 					var newPrevious = [retVal].concat(next.previous);
 					retVal = next.copy(newPrevious);
