@@ -8,19 +8,22 @@ var obj = { name: "Sample this" };
 
 test("Closed delegates", function () {
 	var d = Delegate.createClosed(obj, thisReturner);
+	equal(d.method, thisReturner);
+	equal(d.target, obj);
 	equal(d(), obj);
 	equal(d(-20), obj);
 
 	d = Delegate.createClosed([1, 2, 3], "join");
 	equal(d.method, Array.prototype.join, "Create closed delegate by method name");
 	equal(d(','), "1,2,3");
-
 });
 test("Open delegates", function () {
 	var d = Delegate.createOpen(thisReturner);
 	equal(d(-20), window, "Open delegate passes no this");
 
 	d = Delegate.createOpen(argReturner);
+	equal(d.method, argReturner);
+	ok(!d.hasOwnProperty("target"), "Open delegates have no target");
 	equal(d(8), 8);
 	equal(d(8, -20), 8);
 });
@@ -31,6 +34,8 @@ test("OpenThis delegates", function () {
 	equal(d(obj, -20), obj);
 
 	d = Delegate.createOpenThis(argReturner);
+	equal(d.method, argReturner);
+	ok(!d.hasOwnProperty("target"), "Open delegates have no target");
 	ok(typeof d(-20) === "undefined", "OpenThis delegate should pass this before function arguments");
 	equal(d(-20, 16), 16, "OpenThis delegate passes second argument as first parameter");
 });
@@ -53,6 +58,7 @@ test("Curried delegates", function () {
 
 	var c = d.curry(1);
 	deepEqual(c(2), [1, 2], "Single curried argument works");
+	equal(c.method, d.method);
 });
 
 test("Combined delegates", function () {
