@@ -49,10 +49,92 @@
 			}
 			return callback(this, this.invoker);
 		},
+
+		pop: function () {
+			/// <summary>Returns a copy of this delegate with the last (most recently added) method removed, or null if there is only one method.</summary>
+			if (this.previous.length === 0)
+				return null;
+
+			//Take the top of the last subtree, and add
+			//all of its subtrees to our other subtrees
+
+			var newTop = this.previous[this.previous.length - 1];
+
+			var newPrevious = this.previous.concat(newTop.previous);
+			newPrevious.splice(this.previous.length - 1, 1);
+			return newTop.copy(newPrevious);
+		},
+
 		remove: function () {
+			/// <summary>Removes the last (most recently added) occurrence of each method in one or more delegates from this delegate, returning a new delegate (or null if there are no other methods).</summary>
+			return removeImpl(this, flatten(arguments), false);
+		},
+		removeAll: function () {
 			/// <summary>Removes all of the methods in one or more delegates from this delegate, returning a new delegate (or null if there are no other methods).</summary>
+			return removeImpl(this, flatten(arguments), true);
 		}
 	};
+	function flatten(arr) {
+		var retVal = [];
+		for (var i = 0; i < arr.length; i++) {
+			if (isDelegate(arr[i]))
+				arr[i].each(function (d) { retVal.push(d); });
+			else
+				retVal.push(arr[i]);
+		}
+		return retVal;
+	}
+	function removeImpl(source, toRemove, removeAll) {
+		if (!(toRemove instanceof Array))
+			throw new Error("toRemove must be flattened");
+
+		for (var i = 0; i < toRemove.length; i++) {
+			if (!isMatch(source, toRemove[i]))
+				continue;
+			if (source.previous.length === 0)
+				return null;
+			else {
+				if (!removeAll)	//If we're only removing the first occurrence, remove that match from the array of removables
+					toRemove.splice(i, 1);
+
+				//If the delegate at the top of the tree matches,
+				//remove it and start again (in case the next one
+				//also needs to be removed).
+				return removeImpl(source.pop(), toRemove, removeAll);
+			}
+		}
+
+		var retVal = source;
+		//If the top of the tree doesn't match,
+		//loop backward through the rest of the
+		//tree and remove any matches.
+		for (i = retVal.previous.length - 1; i >= 0; i--) {
+			//toRemove is modified in-place
+			var trimmed = removeImpl(retVal.previous[i], toRemove, removeAll);
+			if (trimmed === retVal.previous[i])
+				continue; //If this subtree doesn't need to change, skip it
+
+			//If this is the first change, copy the array before we start modifying it
+			if (retVal === source)
+				retVal = source.copy(source.previous.slice());
+
+			if (trimmed !== null)
+				retVal.previous[i] = trimmed;
+			else		//If the entire subtree was removed, remove the entry from the array.
+				retVal.previous.splice(i, 1);
+		}
+		return retVal;
+	}
+	function isMatch(delegate, comparand) {
+		if (isDelegate(comparand))
+			return (delegate.method === comparand.method && delegate.target === comparand.target);
+		if (typeof comparand === "function")
+			return delegate.method === comparand;
+		if (typeof comparand === "string")
+			return comparand === delegate.method.name;
+
+		throw new Error("Unsupported remove() parameter: " + comparand);
+	}
 
 	function isDelegate(func) {
 		/// <summary>Checks whether an object is a delegate function.</summary>

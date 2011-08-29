@@ -82,3 +82,64 @@ test("Combined delegates", function () {
 	d();
 	deepEqual(arr, [1, 2, 3, 4, 5, 6], "Multiple chains combine correctly");
 });
+test("Pop", function () {
+	strictEqual(Delegate.createOpen(Object).pop(), null, "Popping single delegate returns null");
+
+	var arr = [];
+
+	var base = Delegate.combine(
+		function init() { arr = []; },
+		function a1() { arr.push(1); }
+	);
+
+	base.pop()();
+	deepEqual(arr, []);
+
+	Delegate.combine(
+		base,
+		Delegate.combine(
+			function () { arr.push(2); },
+			function () { arr.push(3); },
+			function () { arr.push(4); }
+		)
+	).pop()();
+	deepEqual(arr, [1, 2, 3]);
+
+});
+test("Remove", function () {
+	var arr = [];
+
+	var base = Delegate.combine(
+		function init() { arr = []; },
+		function a1() { arr.push(1); }
+	);
+
+	strictEqual(base.remove(base), null, "Removing entire self returns null");
+	strictEqual(base.remove("q"), base, "Removing non-existent method returns original delegate");
+
+	strictEqual(Delegate.combine(base, Array, base).remove(Delegate.combine(base, Array, base)), null, "Removing self returns null even with duplicates");
+
+	var withDups = Delegate.combine(base, function () { arr.push(2); }, base.method);
+	withDups();
+	deepEqual(arr, [1, 2, 1]);
+	withDups.remove("a1")();
+	deepEqual(arr, [1, 2], "Remove removes first match");
+	withDups.removeAll("a1")();
+	deepEqual(arr, [2], "RemoveAll removes all matches");
+
+	var methods1 = Delegate.combine(
+		function a2() { arr.push(2); },
+		function a3() { arr.push(3); },
+		function a4() { arr.push(4); }
+	);
+	var four = Delegate.combine(base, methods1);
+
+	four();
+	deepEqual(arr, [1, 2, 3, 4]);
+
+	four.remove(methods1.method)();
+	deepEqual(arr, [1, 2, 3]);
+
+	four.remove("a2", "a1")();
+	deepEqual(arr, [3, 4]);
+});
