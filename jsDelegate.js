@@ -50,6 +50,13 @@
 			return callback(this, this.invoker);
 		},
 
+		push: function () {
+			/// <summary>Creates a delegate with the specified functions or delegates appended to this instance.</summary>
+			var args = [this];
+			args.push.apply(args, arguments);
+			return Delegate.combine.apply(Delegate, args);
+		},
+
 		pop: function () {
 			/// <summary>Returns a copy of this delegate with the last (most recently added) method removed, or null if there is only one method.</summary>
 			if (this.previous.length === 0)
